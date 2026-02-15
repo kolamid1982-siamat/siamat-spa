@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - SiAMAT</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <style>
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .dark .glass-effect {
+            background: rgba(30, 41, 59, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .floating {
+            animation: floating 3s ease-in-out infinite;
+        }
+        
+        @keyframes floating {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+            100% { transform: translateY(0px); }
+        }
+        
+        .pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .shake {
+            animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+        }
+        
+        @keyframes shake {
+            10%, 90% { transform: translateX(-1px); }
+            20%, 80% { transform: translateX(2px); }
+            30%, 50%, 70% { transform: translateX(-4px); }
+            40%, 60% { transform: translateX(4px); }
+        }
+        
+        .input-focus-effect {
+            transition: all 0.3s ease;
+        }
+        
+        .input-focus-effect:focus {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.3);
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen flex items-center justify-center p-4"
+      x-data="loginApp"
+      x-init="init"
+      :class="{ 'dark': darkMode }">
+    
+    <!-- Background Decorations -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+        <div class="absolute top-0 left-0 w-96 h-96 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 floating"></div>
+        <div class="absolute bottom-0 right-0 w-96 h-96 bg-indigo-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 floating" style="animation-delay: 1s;"></div>
+        <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 floating" style="animation-delay: 2s;"></div>
+    </div>
+    
+    <!-- Loading Overlay -->
+    <div x-show="loading" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center"
+         style="display: none;">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-2xl flex flex-col items-center">
+            <div class="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+            <p class="mt-4 text-lg font-medium text-slate-700 dark:text-slate-300" x-text="loadingMessage"></p>
+        </div>
+    </div>
+    
+    <!-- Toast Notification -->
+    <div x-show="toast.show" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 transform scale-90 translate-y-10"
+         x-transition:enter-end="opacity-100 transform scale-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100 transform scale-100 translate-y-0"
+         x-transition:leave-end="opacity-0 transform scale-90 translate-y-10"
+         class="fixed top-4 right-4 z-50 max-w-md"
+         style="display: none;">
+        <div :class="{
+            'bg-green-500': toast.type === 'success',
+            'bg-red-500': toast.type === 'error',
+            'bg-blue-500': toast.type === 'info',
+            'bg-yellow-500': toast.type === 'warning'
+        }" class="rounded-xl shadow-2xl p-4 text-white">
+            <div class="flex items-center">
+                <i :class="{
+                    'fa-solid fa-check-circle': toast.type === 'success',
+                    'fa-solid fa-exclamation-circle': toast.type === 'error',
+                    'fa-solid fa-info-circle': toast.type === 'info',
+                    'fa-solid fa-exclamation-triangle': toast.type === 'warning'
+                }" class="text-xl mr-3"></i>
+                <div class="flex-1">
+                    <p class="font-semibold" x-text="toast.title"></p>
+                    <p class="text-sm opacity-90" x-text="toast.message"></p>
+                </div>
+                <button @click="toast.show = false" class="ml-4 text-white/80 hover:text-white">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Login Card -->
+    <div class="w-full max-w-md relative z-10">
+        <!-- Logo Section -->
+        <div class="text-center mb-8">
+            <div class="inline-block p-4 bg-white/10 backdrop-blur-lg rounded-3xl mb-4">
+                <i class="fa-solid fa-calculator text-5xl text-white"></i>
+            </div>
+            <h1 class="text-4xl font-bold text-white mb-2">SiAMAT</h1>
+            <p class="text-white/80 text-sm">Sistem Administrasi Matematika Terpadu</p>
+            
+        </div>
+        
+        <!-- Login Card -->
+        <div class="glass-effect rounded-3xl shadow-2xl p-8 transition-all duration-500"
+             :class="{ 'shake': formError }">
+            
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <h2 class="text-2xl font-bold text-slate-800 dark:text-white">Selamat Datang</h2>
+                <p class="text-slate-600 dark:text-slate-400 text-sm mt-2">Silakan login untuk melanjutkan</p>
+            </div>
+            
+            <!-- Login Form -->
+            <form @submit.prevent="handleLogin" class="space-y-6">
+                <!-- Username Field -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                        <i class="fa-solid fa-user mr-2 text-indigo-500"></i>
+                        Username
+                    </label>
+                    <div class="relative">
+                        <i class="fa-solid fa-user absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
+                        <input type="text" 
+                               x-model="form.username" 
+                               @focus="formError = false"
+                               required
+                               placeholder="Masukkan username"
+                               class="input-focus-effect w-full pl-12 pr-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition">
+                    </div>
+                </div>
+                
+                <!-- Password Field -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                        <i class="fa-solid fa-lock mr-2 text-indigo-500"></i>
+                        Password
+                    </label>
+                    <div class="relative">
+                        <i class="fa-solid fa-lock absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
+                        <input :type="showPassword ? 'text' : 'password'" 
+                               x-model="form.password"
+                               @focus="formError = false"
+                               required
+                               placeholder="Masukkan password"
+                               class="input-focus-effect w-full pl-12 pr-12 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition">
+                        <button type="button" 
+                                @click="showPassword = !showPassword"
+                                class="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-indigo-500 transition">
+                            <i :class="showPassword ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Remember Me & Forgot Password -->
+                <div class="flex items-center justify-between">
+                    <label class="flex items-center space-x-2">
+                        <input type="checkbox" 
+                               x-model="rememberMe"
+                               class="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500">
+                        <span class="text-sm text-slate-600 dark:text-slate-400">Ingat saya</span>
+                    </label>
+                    <a href="#" 
+                       @click.prevent="forgotPassword"
+                       class="text-sm text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 transition">
+                        Lupa password?
+                    </a>
+                </div>
+                
+                <!-- Error Message -->
+                <div x-show="errorMessage" 
+                     x-transition
+                     class="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-xl p-3 text-sm"
+                     style="display: none;">
+                    <i class="fa-solid fa-exclamation-circle mr-2"></i>
+                    <span x-text="errorMessage"></span>
+                </div>
+                
+                <!-- Login Button -->
+                <button type="submit" 
+                        :disabled="loading"
+                        class="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transform hover:scale-[1.02] transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-sign-in-alt" x-show="!loading"></i>
+                    <i class="fa-solid fa-circle-notch animate-spin" x-show="loading"></i>
+                    <span x-text="loading ? 'Memproses...' : 'Masuk'"></span>
+                </button>
+            </form>
+            
+            <!-- Demo Credentials -->
+            <div class="mt-8 p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+                <p class="text-xs text-slate-500 dark:text-slate-400 text-center mb-2">
+                    <i class="fa-solid fa-info-circle mr-1"></i>
+                    Akun Demo
+                </p>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div class="p-2 bg-white dark:bg-slate-600 rounded-lg">
+                        <p class="font-semibold text-indigo-600 dark:text-indigo-400">Admin</p>
+                        <p class="text-slate-600 dark:text-slate-300">admin / admin123</p>
+                    </div>
+                    <div class="p-2 bg-white dark:bg-slate-600 rounded-lg">
+                        <p class="font-semibold text-indigo-600 dark:text-indigo-400">Tamu</p>
+                        <p class="text-slate-600 dark:text-slate-300">tamu / tamu123</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Dark Mode Toggle -->
+            <div class="mt-6 text-center">
+                <button @click="toggleDarkMode" 
+                        class="text-sm text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
+                    <i :class="darkMode ? 'fa-solid fa-sun' : 'fa-solid fa-moon'" class="mr-2"></i>
+                    <span x-text="darkMode ? 'Light Mode' : 'Dark Mode'"></span>
+                </button>
+            </div>
+            
+            <!-- Version -->
+            <p class="mt-4 text-center text-xs text-slate-400">
+                Version 1.0.0 | © 2026 SiAMAT
+            </p>
+        </div>
+    </div>
+    
+    <script>
+        // Config minimal untuk login page
+        const CONFIG = {
+            WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbxaJqSnCjGId6suLjVOtfQHwJG0PIB2BTGRKMKWnQC7ApN2a9ZhOk4h6RYF8566Z1h12g/exec' // GANTI DENGAN URL APPS SCRIPT ANDA
+        };
+        
+        // Simple API untuk login
+        const api = {
+            async post(action, data) {
+                const url = new URL(CONFIG.WEB_APP_URL);
+                url.searchParams.append('action', action);
+                
+                const response = await fetch(url.toString(), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'text/plain;charset=utf-8',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const text = await response.text();
+                return JSON.parse(text);
+            }
+        };
+        
+        // Login App
+        function loginApp() {
+            return {
+                // Data
+                form: {
+                    username: '',
+                    password: ''
+                },
+                showPassword: false,
+                rememberMe: false,
+                loading: false,
+                loadingMessage: 'Memproses...',
+                errorMessage: '',
+                formError: false,
+                darkMode: localStorage.getItem('darkMode') === 'true',
+                
+                // Toast
+                toast: {
+                    show: false,
+                    type: 'info',
+                    title: '',
+                    message: ''
+                },
+                
+                // Init
+                init() {
+                    // Apply dark mode
+                    if (this.darkMode) {
+                        document.documentElement.classList.add('dark');
+                    }
+                    
+                    // Check if already logged in
+                    const user = localStorage.getItem('user');
+                    if (user) {
+                        window.location.href = 'index.html';
+                    }
+                    
+                    // Load saved username
+                    const savedUsername = localStorage.getItem('saved_username');
+                    if (savedUsername) {
+                        this.form.username = savedUsername;
+                        this.rememberMe = true;
+                    }
+                    
+                    console.log('✅ Login page initialized');
+                },
+                
+                // Handle login
+                async handleLogin() {
+                    // Validasi
+                    if (!this.form.username || !this.form.password) {
+                        this.showError('Username dan password harus diisi');
+                        return;
+                    }
+                    
+                    this.loading = true;
+                    this.loadingMessage = 'Memverifikasi...';
+                    this.errorMessage = '';
+                    this.formError = false;
+                    
+                    try {
+                        const result = await api.post('login', {
+                            username: this.form.username,
+                            password: this.form.password
+                        });
+                        
+                        if (result.status === 'success') {
+                            // Simpan user
+                            localStorage.setItem('user', JSON.stringify(result.data));
+                            
+                            // Simpan username jika remember me
+                            if (this.rememberMe) {
+                                localStorage.setItem('saved_username', this.form.username);
+                            } else {
+                                localStorage.removeItem('saved_username');
+                            }
+                            
+                            this.showToast('success', 'Berhasil!', 'Login berhasil, mengalihkan...');
+                            
+                            // Redirect ke index.html
+                            setTimeout(() => {
+                                window.location.href = 'index.html';
+                            }, 1000);
+                            
+                        } else {
+                            this.formError = true;
+                            this.errorMessage = result.message || 'Login gagal';
+                            this.showToast('error', 'Gagal!', this.errorMessage);
+                        }
+                        
+                    } catch (error) {
+                        console.error('Login error:', error);
+                        this.formError = true;
+                        this.errorMessage = 'Terjadi kesalahan. Cek koneksi atau URL backend.';
+                        this.showToast('error', 'Error!', this.errorMessage);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                // Forgot password
+                forgotPassword() {
+                    this.showToast('info', 'Info', 'Hubungi administrator untuk reset password');
+                },
+                
+                // Show error
+                showError(message) {
+                    this.errorMessage = message;
+                    this.formError = true;
+                    setTimeout(() => {
+                        this.formError = false;
+                    }, 3000);
+                },
+                
+                // Show toast
+                showToast(type, title, message) {
+                    this.toast = {
+                        show: true,
+                        type,
+                        title,
+                        message
+                    };
+                    
+                    setTimeout(() => {
+                        this.toast.show = false;
+                    }, 3000);
+                },
+                
+                // Toggle dark mode
+                toggleDarkMode() {
+                    this.darkMode = !this.darkMode;
+                    localStorage.setItem('darkMode', this.darkMode);
+                    
+                    if (this.darkMode) {
+                        document.documentElement.classList.add('dark');
+                    } else {
+                        document.documentElement.classList.remove('dark');
+                    }
+                    
+                    this.showToast('info', 'Mode', this.darkMode ? 'Mode gelap aktif' : 'Mode terang aktif');
+                }
+            };
+        }
+    </script>
+    
+    <!-- GANTI URL INI DENGAN URL APPS SCRIPT ANDA -->
+    <script>
+        // UPDATE CONFIG.WEB_APP_URL dengan URL Apps Script Anda
+        CONFIG.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxaJqSnCjGId6suLjVOtfQHwJG0PIB2BTGRKMKWnQC7ApN2a9ZhOk4h6RYF8566Z1h12g/exec';
+    </script>
+</body>
+</html>
