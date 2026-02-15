@@ -202,5 +202,15 @@
     
     <!-- Main App -->
     <script src="js/app.js"></script>
+    <!-- 4. Test script -->
+    <script>
+        // Test apakah component terdaftar
+        console.log('✅ Components loaded:', {
+            Dashboard: typeof DashboardComponent !== 'undefined',
+            Kelas: typeof KelasComponent !== 'undefined',
+            Router: typeof Router !== 'undefined',
+            Store: typeof Store !== 'undefined'
+        });
+    </script>
 </body>
 </html>
